@@ -1,0 +1,25 @@
+openssl genrsa -aes256 -passout pass:12345678 -out ca.pass.key 4096
+openssl rsa -passin pass:12345678 -in ca.pass.key -out ca.key
+rm ca.pass.key
+
+openssl req -new -x509 -days 3650 -key ca.key -out ca.pem
+
+
+CLIENT_ID="01-kali"
+CLIENT_SERIAL=01
+openssl genrsa -aes256 -passout pass:12345678 -out ${CLIENT_ID}.pass.key 4096
+openssl rsa -passin pass:12345678 -in ${CLIENT_ID}.pass.key -out ${CLIENT_ID}.key
+rm ${CLIENT_ID}.pass.key
+openssl req -new -key ${CLIENT_ID}.key -out ${CLIENT_ID}.csr
+openssl x509 -req -days 3650 -in ${CLIENT_ID}.csr -CA ca.pem -CAkey ca.key -set_serial ${CLIENT_SERIAL} -out ${CLIENT_ID}.pem
+
+cat ${CLIENT_ID}.key ${CLIENT_ID}.pem ca.pem > ${CLIENT_ID}.full.pem
+openssl pkcs12 -export -out ${CLIENT_ID}.full.pfx -inkey ${CLIENT_ID}.key -in ${CLIENT_ID}.pem -certfile ca.pem
+
+
+Чтобы nginx при перезагрузке не спрашивал пароль, сделаем для него беспарольную копию сертификата
+openssl rsa -in server.key -out server.nopass.key
+
+
+
+curl -k --cert 02-kali.full.pem https://localhost:8443
